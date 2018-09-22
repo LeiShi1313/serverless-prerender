@@ -114,14 +114,21 @@ export class Prerender {
           (s) => s.after!(request, renderResponse),
         );
 
+        this.log("cleanup...");
+        await this.driver.shutdown();
+
         this.log("normalizing response");
         return this.normalizeResponse(afterResponse || renderResponse);
       })()).timeout(timeout);
-    } finally {
-      this.log("cleanup...");
-      await this.driver.shutdown();
+    } catch (e) {
+      this.log("Got an error: ", e);
+      return {
+        statusCode: 400,
+        body: e,
+      };
     }
   }
+
 
   private transformEvent(event: Event): Strategy.Request | null {
     const urlWithoutQuery = event.path.slice(1);

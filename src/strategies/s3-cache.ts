@@ -9,14 +9,14 @@ type KeyMapper = (url: string) => string;
 
 export interface S3CacheStrategyOptions {
   Bucket: string;
-  KeyPrefix?: string;
+  KeyPrefix?: KeyMapper;
   ExpiresInSeconds?: number;
   keyMapper?: KeyMapper;
 }
 
 export class S3CacheStrategy implements Strategy.StrategyLifeCycle {
   private readonly BUCKET: string;
-  private readonly KEY_PREFIX: string;
+  private readonly KEY_PREFIX: KeyMapper;
   private readonly EXPIRES_IN_MS: number;
 
   private readonly LOG_TAG = "serverless-prerender:S3CacheStrategy";
@@ -27,7 +27,7 @@ export class S3CacheStrategy implements Strategy.StrategyLifeCycle {
 
   constructor(options: S3CacheStrategyOptions) {
     this.BUCKET = options.Bucket;
-    this.KEY_PREFIX = options.KeyPrefix || "";
+    this.KEY_PREFIX = options.KeyPrefix || this.defaultKeyMapper;
     this.EXPIRES_IN_MS = options.ExpiresInSeconds ?
       (options.ExpiresInSeconds * 1000) :
       (60 * 60 * 24 * 1000); // defaults to 1 day
@@ -35,7 +35,7 @@ export class S3CacheStrategy implements Strategy.StrategyLifeCycle {
   }
 
   public async before(request: Strategy.Request) {
-    const key = path.join(this.KEY_PREFIX, this.keyMapper(request.url));
+    const key = path.join(this.KEY_PREFIX(request.url), this.keyMapper(request.url));
 
     try {
       this.log("looking for cached data (%s/%s)", this.BUCKET, key);
@@ -63,7 +63,7 @@ export class S3CacheStrategy implements Strategy.StrategyLifeCycle {
   }
 
   public async after(request: Strategy.Request, response: Strategy.Response) {
-    const key = path.join(this.KEY_PREFIX, this.keyMapper(request.url));
+    const key = path.join(this.KEY_PREFIX(request.url), this.keyMapper(request.url));
 
     try {
       this.log("saving response to cache");

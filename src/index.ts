@@ -1,4 +1,5 @@
 import * as BbPromise from "bluebird";
+import * as debug from "debug";
 
 import { Driver } from "./driver";
 import { Prerender } from "./prerender";
@@ -16,16 +17,27 @@ const prerender = new Prerender(
 prerender.use(
   // S3CacheStrategy can be optional
   new S3CacheStrategy({
-    Bucket: "YOUR-BUCKET-NAMAE",
-    // Bucket: "YOUR-CACHE-NAME",
-    // KeyPrefix: "KEY_PREFIX/IF/YOU/WANT",
-    // ExpiresInSeconds: 3600, // 1h
+    Bucket: "serverless-prerender-cache",
+    KeyPrefix(url: string) {
+      const match = url.match("^(?:https?:\\/\\/)?(?:[^@\\/\\n]+@)?(?:www\\.)?([^:\\/?\\n]+)");
+      if (match && match.length >= 2) {
+        return match[1];
+      } else {
+        return url;
+      }
+    },
+    ExpiresInSeconds: 3600 * 24 * 3,
     // keyMapper(url: string) {
-    //   return customUrlSerializer(url);
+    //   const match = url.match("^(?:https?:\/\/)?(?:[^@\/\n]+@)?(.*)$");
+    //   if (match && match.length >= 2) {
+    //       return match[1];
+    //   } else {
+    //       return url;
+    //   }
     // },
   }),
   new PrerenderStrategy({
-    waitForPrerenderReady: true,
+    waitForPrerenderReady: false,
     stripScripts: true,
     // timeout: CUSTOM_NAVIGATION_TIMEOUT,
   }),
@@ -33,6 +45,6 @@ prerender.use(
 
 export function handler(event: Event, context: Context, callback: HandlerCallback) {
   BbPromise.resolve(
-    prerender.handleEvent(event /*, RENDERER_TIMEOUT */),
+    prerender.handleEvent(event, 60000),
   ).asCallback(callback);
 }

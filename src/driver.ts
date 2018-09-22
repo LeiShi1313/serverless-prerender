@@ -3,6 +3,7 @@ import * as debug from "debug";
 import * as puppeteer from "puppeteer";
 import * as request from "request";
 
+import { CDP } from "./chrome-remote-interface";
 import { launchChrome } from "./serverless-chrome";
 
 export interface DriverOptions {
@@ -40,6 +41,12 @@ export class Driver {
 
   public async shutdown() {
     if (this.browser) {
+      // const targets = await this.browser.targets();
+      // for (const target of targets) {
+      //   if (target.type() === "page") {
+      //     await (await target.page()).close();
+      //   }
+      // }
       await this.browser.close();
       this.browser = null;
 
